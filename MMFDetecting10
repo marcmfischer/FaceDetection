@@ -1,4 +1,4 @@
-from face_detector import YoloDetector
+# from face_detector import YoloDetector
 import numpy as np
 from PIL import Image
 import cv2
