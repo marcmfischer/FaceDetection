@@ -1,0 +1,125 @@
+from face_detector import YoloDetector
+import numpy as np
+from PIL import Image
+import cv2
+#using face-recognition first. Hopefully later I will use deep_face or similar
+import face_recognition
+
+#Decide which images to use
+#Images to test the code on
+#input_image = "Classroom1.jpg"
+test_image = "Marc1.jpg"
+
+#Images to train with
+train_image = "Marc2.jpg"
+
+#Decide which code to run
+show_individual_faces = False
+show_all_faces = False
+
+model = YoloDetector(target_size=720, device="cuda:0", min_face=20)
+orgimg = np.array(Image.open(test_image))
+bboxes,points = model.predict(orgimg)
+print(bboxes)
+
+#Find number of pictures
+num_face = len(bboxes[0])
+print(f"Number of faces found {num_face}")
+
+
+#size of original picture
+img = cv2.imread(test_image)
+height, width = img.shape[:2]
+print(f"The original picture has size: {height} by {width}")
+#this shows the cut out pictures by themselves
+if show_individual_faces:
+    cv2.imshow('img', img)
+    cv2.waitKey(0)
+    for i in range(num_face): 
+        #fist coordinates
+        np_boxes = np.array(bboxes[0][i])
+        print(np_boxes)
+        print(f"The box is from {np_boxes[0]}")
+        x1, y1 = np_boxes[0], np_boxes[1]  # Top-left corner
+        x2, y2 = np_boxes[2], np_boxes[3]  # Bottom-right corner
+        cutout_region = img[y1:y2, x1:x2]
+
+        cv2.imshow('img', cutout_region)
+        cv2.waitKey(0)
+
+#This shows the original picture with the detected faces
+if show_all_faces:
+    for i in range(num_face):
+        np_boxes = np.array(bboxes[0][i])
+        x1, y1 = np_boxes[0], np_boxes[1]  # Top-left corner
+        x2, y2 = np_boxes[2], np_boxes[3]  # Bottom-right corner
+        cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 3)
+    cv2.imshow('img', img)
+    cv2.waitKey(0)
+
+#Face recognition using face_recognition
+#Get training picture
+    #Cut face from picture
+    #Use picture as training picture
+#Test on another picture
+
+img_bgr = face_recognition.load_image_file(test_image)
+img_rgb = cv2.cvtColor(img_bgr,cv2.COLOR_BGR2RGB)
+#cv2.imshow('bgr', img_bgr)
+#cv2.imshow('rgb', img_rgb)
+#cv2.waitKey(0)
+
+img_modi=face_recognition.load_image_file(test_image)
+img_modi_rgb = cv2.cvtColor(img_modi,cv2.COLOR_BGR2RGB)
+#--------- Detecting Face -------
+face = face_recognition.face_locations(img_modi_rgb)[0]
+copy = img_modi_rgb.copy()
+# ------ Drawing bounding boxes around Faces------------------------
+cv2.rectangle(copy, (face[3], face[0]),(face[1], face[2]), (255,0,255), 2)
+cv2.imshow('copy', copy)
+cv2.imshow('MODI',img_modi_rgb)
+cv2.waitKey(0)
+
+
+img_modi = face_recognition.load_image_file(train_image)
+img_modi = cv2.cvtColor(img_modi,cv2.COLOR_BGR2RGB)
+
+#------to find the face location
+face = face_recognition.face_locations(img_modi)[0]
+
+#--Converting image into encodings
+train_encode = face_recognition.face_encodings(img_modi)[0]
+
+#----- lets test an image
+test = face_recognition.load_image_file(test_image)
+test = cv2.cvtColor(test, cv2.COLOR_BGR2RGB)
+test_encode = face_recognition.face_encodings(test)[0]
+found_person = face_recognition.compare_faces([train_encode],test_encode)
+cv2.rectangle(img_modi, (face[3], face[0]),(face[1], face[2]), (255,0,255), 1)
+cv2.imshow('img_modi', img_modi)
+cv2.waitKey(0)
+
+if found_person:
+    # Define the text and position
+    text = "Marc"
+else:
+    text = "Not Recognized"
+
+x, y = 100, 100  # Specify the x and y coordinates
+
+# Define the font and other text properties
+font = cv2.FONT_HERSHEY_SIMPLEX
+font_scale = 1
+font_color = (255, 255, 255)  # White color in BGR
+thickness = 2
+
+# Add the text to the image
+cv2.putText(img, text, (x, y), font, font_scale, font_color, thickness)
+
+# Display or save the image with the text
+cv2.imshow("Image with Text", img)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
+# To save the image with the added text
+# cv2.imwrite("image_with_text.jpg", image)

@@ -1,0 +1,70 @@
+from face_detector import YoloDetector
+import numpy as np
+from PIL import Image
+import cv2
+#using face-recognition first. Hopefully later I will use deep_face or similar
+import face_recognition
+
+#Decide which images to use
+#Images to test the code on
+#test_image_file = "Classroom1.jpg"
+#test_image = "Marc1.jpg"
+test_image_file = "DSC_4744.jpg"
+#Images to train with
+train_image = "Marc2.jpg"
+
+
+test_image = face_recognition.load_image_file(test_image_file)
+face_locations = face_recognition.face_locations(test_image)
+'''
+print(face_locations)
+for i, face_location in enumerate(face_locations):
+    top, right, bottom, left = face_location
+    cv2.rectangle(test_image, (left, top), (right, bottom), (0, 255, 0), 2)  # Green rectangle
+    cv2.putText(test_image, f"Face {i+1}", (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+cv2.imshow("Image with Face Recognition", test_image)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+'''
+img_train = face_recognition.load_image_file(train_image)
+img_train = cv2.cvtColor(img_train,cv2.COLOR_BGR2RGB)
+
+#------to find the face location
+face = face_recognition.face_locations(img_train)[0]
+
+#--Converting image into encodings
+face_encodings_train = face_recognition.face_encodings(img_train)
+
+# Load an image with faces
+test_image = face_recognition.load_image_file(test_image_file)
+
+# Find face locations in the image
+face_locations = face_recognition.face_locations(test_image)
+face_encodings_test = face_recognition.face_encodings(test_image)
+
+#
+test_cv2 = cv2.imread(test_image_file)
+
+for i, face_location in enumerate(face_locations):
+    top, right, bottom, left = face_location
+
+    # Encode the face in the location
+    face_encoding_to_check = face_encodings_test[i]
+
+    # Compare the face encoding to the known encodings
+    results = face_recognition.compare_faces(face_encodings_train, face_encoding_to_check)
+    print(results)
+    for j, result in enumerate(results):
+        if result:
+            # Draw a rectangle around the face
+            cv2.rectangle(test_cv2, (left, top), (right, bottom), (0, 255, 0), 2)  # Green rectangle
+            cv2.putText(test_cv2, f"Face {j+1}", (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+# Display the image with rectangles around recognized faces
+cv2.imshow("Image with Face Recognition", test_cv2)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
+
+# To save the image with the added text
+# cv2.imwrite("image_with_text.jpg", image)

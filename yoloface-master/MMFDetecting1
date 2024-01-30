@@ -1,0 +1,34 @@
+from face_detector import YoloDetector
+import numpy as np
+from PIL import Image
+import cv2
+
+
+
+model = YoloDetector(target_size=720, device="cuda:0", min_face=20)
+orgimg = np.array(Image.open('Classroom1.jpg'))
+bboxes,points = model.predict(orgimg)
+print(bboxes)
+
+#Find number of pictures
+num_face = len(bboxes[0])
+print(f"Number of faces found {num_face}")
+
+
+#size of original picture
+img = cv2.imread('Classroom1.jpg')
+height, width = img.shape[:2]
+print(f"The original picture has size: {height} by {width}")
+cv2.imshow('img', img)
+cv2.waitKey(0)
+for i in range(num_face): 
+    #fist coordinates
+    np_boxes = np.array(bboxes[0][i])
+    print(np_boxes)
+    print(f"The box is from {np_boxes[0]}")
+    x1, y1 = np_boxes[0], np_boxes[1]  # Top-left corner
+    x2, y2 = np_boxes[2], np_boxes[3]  # Bottom-right corner
+    cutout_region = img[y1:y2, x1:x2]
+
+    cv2.imshow('img', cutout_region)
+    cv2.waitKey(0)

@@ -1,0 +1,113 @@
+from face_detector import YoloDetector
+import numpy as np
+from PIL import Image
+import cv2
+import time
+import pickle
+#using face-recognition first. Hopefully later I will use deep_face or similar
+import face_recognition
+
+
+def face_encoding(file_name):
+    img_train = face_recognition.load_image_file(file_name)
+    img_train = cv2.cvtColor(img_train,cv2.COLOR_BGR2RGB)
+
+    #------to find the face location
+    face = face_recognition.face_locations(img_train)
+
+    #--Converting image into encodings
+    face_encodings_train = face_recognition.face_encodings(img_train)
+    return face_encodings_train
+
+#Keep track of who was found
+student_found = np.zeros((40, 1))
+print(student_found)
+
+
+#Decide which images to use
+test_image_file = "Test6.jpg"
+
+start_time = time.time()
+
+train_new_pictures = True
+test_from_video = True
+save_train_new = True
+load_train_new = False
+if train_new_pictures:
+    #face_encodings_train = [ face_encoding('Ella2.jpg'), face_encoding('Sunny2.jpg'),face_encoding('Marc1.jpg')]
+    face_encodings_train = [ face_encoding('MATH113Pictures/1.jpeg'), face_encoding('MATH113Pictures/2.jpeg'), face_encoding('MATH113Pictures/7.jpeg'), face_encoding('MATH113Pictures/14.jpeg'), face_encoding('MATH113Pictures/29.jpeg'), face_encoding('MATH113Pictures/31.jpeg'), face_encoding('MATH113Pictures/32.jpeg')]
+if save_train_new:
+    file_path = "known_face_encodings.pkl"
+    # Save the encodings to the file using pickle
+    with open(file_path, "wb") as file:
+        pickle.dump(face_encodings_train, file)
+if load_train_new:
+    file_path = "known_face_encodings.pkl"
+
+    # Load the encodings from the file using pickle
+    with open(file_path, "rb") as file:
+        face_encodings_train = pickle.load(file)
+
+if test_from_video:
+    video_path = "MATH113Videos/Class4_crop720p.mp4"
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print("Failed to open the video file")
+    else:
+        print("Video file opened successfully")
+
+    frame_counter = 0
+    frame_interval = 200
+
+    while True:
+        ret, frame = cap.read()
+        
+        if not ret:
+            break  # Break the loop when we reach the end of the video
+        
+        frame_counter += 1
+        
+        if frame_counter % frame_interval == 0:
+            print(f"Frame to capture: {frame_counter}")
+            #cv2.imshow("Resized Image", frame)
+            test_image = frame
+            face_locations = face_recognition.face_locations(test_image)
+            face_encodings_test = face_recognition.face_encodings(test_image)
+
+            print(f"Number of training images: {len(face_encodings_train)}")
+            print(f"Number of images found: {len(face_encodings_test)}")
+            test_cv2 = test_image
+            for i, face_location in enumerate(face_locations):
+                top, right, bottom, left = face_location
+                #Label Faces
+                cv2.rectangle(test_cv2, (left, top), (right, bottom), (0, 255, 0), 2)
+                cv2.putText(test_cv2, f"Face number in test picture: {i}", (left, top - 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+            
+                for j in range(len(face_encodings_train)):
+                    
+                    result = face_recognition.compare_faces(face_encodings_train[j], face_encodings_test[i])
+                    #print(f"Checking face location {i} for trained face {j} with result {result}")
+                    if result[0]:
+                        print(f"Found person {j+1} in frame {frame_counter}")
+                        student_found[j]=1
+                        # Label which was recognized
+                        cv2.putText(test_cv2, f"Face recognized as person {j+1}", (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                        result = False
+                
+
+
+
+
+    cap.release()
+    cv2.destroyAllWindows()    
+
+
+scale = 0.9
+resized_image = cv2.resize(test_cv2, None, fx=scale, fy=scale)
+cv2.imshow("Resized Image", resized_image)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+print(student_found)
+
+# To save the image with the added text
+# cv2.imwrite("image_with_text.jpg", image)

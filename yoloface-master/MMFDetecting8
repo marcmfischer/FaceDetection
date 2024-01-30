@@ -1,0 +1,146 @@
+from face_detector import YoloDetector
+import numpy as np
+from PIL import Image
+import cv2
+import time
+import pickle
+#using face-recognition first. Hopefully later I will use deep_face or similar
+import face_recognition
+import os
+
+
+def face_encoding(file_name):
+    img_train = face_recognition.load_image_file(file_name)
+    img_train = cv2.cvtColor(img_train,cv2.COLOR_BGR2RGB)
+
+    #------to find the face location
+    face = face_recognition.face_locations(img_train)
+
+    #--Converting image into encodings
+    face_encodings_train = face_recognition.face_encodings(img_train)
+    return face_encodings_train
+
+def train_new_pictures_function(file_directory):
+    face_encodings_train = []
+    for filename in os.listdir(directory_path):
+        # Check if the file is an image based on its file extension
+        if filename.endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp')):
+            # Construct the full path to the image file
+            image_path = os.path.join(directory_path, filename)
+
+            # Open the image using PIL
+            try:
+                 new_face_encoding = face_encoding(image_path)
+                 face_encodings_train.append(new_face_encoding)
+
+            except Exception as e:
+                # Handle any exceptions that might occur during image processing
+                print(f"Error processing {filename}: {str(e)}")
+    return face_encodings_train
+
+
+
+#Decide which images to use
+test_image_file = "Test6.jpg"
+
+
+
+train_new_pictures = False
+test_from_video = True
+save_train_new = False
+load_train_new = True
+if train_new_pictures:
+    #face_encodings_train = [ face_encoding('MATH113Pictures/1.jpeg'), face_encoding('MATH113Pictures/2.jpeg'), face_encoding('MATH113Pictures/7.jpeg'), face_encoding('MATH113Pictures/14.jpeg'), face_encoding('MATH113Pictures/29.jpeg'), face_encoding('MATH113Pictures/31.jpeg'), face_encoding('MATH113Pictures/32.jpeg')]
+        
+    # Directory containing your image files
+    directory_path = 'MATH113Pictures'
+    face_encodings_train = train_new_pictures_function(directory_path)
+    # Loop through all files in the directory
+
+if save_train_new:
+    file_path = "known_face_encodings.pkl"
+    # Save the encodings to the file using pickle
+    with open(file_path, "wb") as file:
+        pickle.dump(face_encodings_train, file)
+
+if load_train_new:
+    file_path = "known_face_encodings.pkl"
+    with open(file_path, "rb") as file:
+        face_encodings_train = pickle.load(file)
+
+#Keep track of who was found
+student_found = np.zeros((40, 1))
+start_time = time.time()
+if test_from_video:
+    video_path = "MATH113Videos/Class5_Cropped.mp4"
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print("Failed to open the video file")
+    else:
+        print("Video file opened successfully")
+
+    frame_counter = 0
+    frame_interval = 200
+
+    while True:
+        ret, frame = cap.read()
+        
+        if not ret:
+            break  # Break the loop when we reach the end of the video
+        
+        frame_counter += 1
+        
+        if frame_counter % frame_interval == 0:
+            print(f"Frame to capture: {frame_counter}")
+            #cv2.imshow("Resized Image", frame)
+            test_image = frame
+            face_locations = face_recognition.face_locations(test_image)
+            face_encodings_test = face_recognition.face_encodings(test_image)
+
+            print(f"Number of training images: {len(face_encodings_train)}")
+            print(f"Number of images found: {len(face_encodings_test)}")
+            test_cv2 = test_image
+            for i, face_location in enumerate(face_locations):
+                top, right, bottom, left = face_location
+                #Label Faces
+                cv2.rectangle(test_cv2, (left, top), (right, bottom), (0, 255, 0), 2)
+                cv2.putText(test_cv2, f"Face number in test picture: {i}", (left, top - 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+            
+                for j in range(len(face_encodings_train)):
+                    
+                    result = face_recognition.compare_faces(face_encodings_train[j], face_encodings_test[i], tolerance=0.6)
+                    #print(f"Checking face location {i} for trained face {j} with result {result}")
+                    if result[0]:
+                        print(f"Found person {j+1} in frame {frame_counter}")
+                        student_found[j]=student_found[j]+1
+                        # Label which was recognized
+                        cv2.putText(test_cv2, f"Face recognized as person {j+1}", (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                        result = False
+            #scale = 0.9
+            #resized_image = cv2.resize(test_cv2, None, fx=scale, fy=scale)
+            #cv2.imshow("Resized Image", resized_image)
+            #cv2.waitKey(0)
+                
+
+
+
+
+    cap.release()
+    cv2.destroyAllWindows()    
+
+
+'''scale = 0.9
+resized_image = cv2.resize(test_cv2, None, fx=scale, fy=scale)
+cv2.imshow("Resized Image", resized_image)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+print(student_found)
+'''
+# Calculate the elapsed time
+end_time = time.time()
+elapsed_time = end_time - start_time
+print(f'Time elapsed = {elapsed_time}')
+
+# Save the NumPy array as a CSV file
+file_path = 'Student_data.csv'
+np.savetxt(file_path, student_found, delimiter=',')

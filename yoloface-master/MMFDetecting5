@@ -1,0 +1,82 @@
+from face_detector import YoloDetector
+import numpy as np
+from PIL import Image
+import cv2
+import time
+#using face-recognition first. Hopefully later I will use deep_face or similar
+import face_recognition
+
+def face_encoding(file_name):
+    img_train = face_recognition.load_image_file(file_name)
+    img_train = cv2.cvtColor(img_train,cv2.COLOR_BGR2RGB)
+
+    #------to find the face location
+    face = face_recognition.face_locations(img_train)
+
+    #--Converting image into encodings
+    face_encodings_train = face_recognition.face_encodings(img_train)
+    return face_encodings_train
+
+
+#Decide which images to use
+test_image_file = "Test5.jpg"
+
+start_time = time.time()
+
+
+
+face_encodings_train = [ face_encoding('Ella2.jpg'), face_encoding('Sunny2.jpg'),face_encoding('Marc1.jpg')]
+#face_encodings_train = [face_encoding('Ella1.jpg')]
+#face_encodings_train = [face_encoding(train_image)]
+#
+
+# Calculate the elapsed time
+end_time = time.time()
+elapsed_time = end_time - start_time
+print(f"Elapsed time to find face encodings: {elapsed_time} seconds")
+
+start_time = time.time()
+# Load an image with faces
+test_image = face_recognition.load_image_file(test_image_file)
+
+# Find face locations in the image
+face_locations = face_recognition.face_locations(test_image)
+face_encodings_test = face_recognition.face_encodings(test_image)
+
+print(f"Number of Training images: {len(face_encodings_train)}")
+test_cv2 = cv2.imread(test_image_file)
+for i, face_location in enumerate(face_locations):
+    top, right, bottom, left = face_location
+    #Label Faces
+    cv2.rectangle(test_cv2, (left, top), (right, bottom), (0, 255, 0), 2)
+    cv2.putText(test_cv2, f"Face number in test picture: {i}", (left, top - 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+ 
+    for j in range(len(face_encodings_train)):
+        
+        result = face_recognition.compare_faces(face_encodings_train[j], face_encodings_test[i])
+        print(f"Checking face location {i} for trained face {j} with result {result}")
+        if result[0]:
+            # Label which was recognized
+            cv2.putText(test_cv2, f"Face recognized as person {j+1}", (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            result = False
+    
+
+# Calculate the elapsed time
+end_time = time.time()
+elapsed_time = end_time - start_time
+print(f"Elapsed time to find compare encodings: {elapsed_time} seconds")
+
+# Display the image with rectangles around recognized faces
+'''
+cv2.imshow("Image with Face Recognition", test_cv2)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+'''
+scale = 0.3
+resized_image = cv2.resize(test_cv2, None, fx=scale, fy=scale)
+cv2.imshow("Resized Image", resized_image)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
+# To save the image with the added text
+# cv2.imwrite("image_with_text.jpg", image)

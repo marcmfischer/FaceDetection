@@ -1,0 +1,69 @@
+from face_detector import YoloDetector
+import numpy as np
+from PIL import Image
+import cv2
+#using face-recognition first. Hopefully later I will use deep_face or similar
+import face_recognition
+
+#Decide which images to use
+#Images to test the code on
+test_image = "Classroom1.jpg"
+#test_image = "Marc1.jpg"
+#test_image = "DSC_4744.jpg"
+#Images to train with
+train_image = "Marc2.jpg"
+
+
+
+#Face recognition using face_recognition
+#Get training picture
+    #Cut face from picture
+    #Use picture as training picture
+#Test on another picture
+
+img_test=face_recognition.load_image_file(test_image)
+img_test_rgb = cv2.cvtColor(img_test,cv2.COLOR_BGR2RGB)
+#--------- Detecting Face -------
+face = face_recognition.face_locations(img_test_rgb)[0]
+face_locations = face_recognition.face_locations(img_test_rgb)
+copy = img_test_rgb.copy()
+
+img_train = face_recognition.load_image_file(train_image)
+img_train = cv2.cvtColor(img_train,cv2.COLOR_BGR2RGB)
+
+#------to find the face location
+face = face_recognition.face_locations(img_train)[0]
+
+#--Converting image into encodings
+train_encode = face_recognition.face_encodings(img_train)[0]
+
+#----- lets test an image
+test = face_recognition.load_image_file(test_image)
+test = cv2.cvtColor(test, cv2.COLOR_BGR2RGB)
+test_encode = face_recognition.face_encodings(test)[0]
+found_person = face_recognition.compare_faces([train_encode],test_encode)
+
+if found_person:
+    # Define the text and position
+    text = "Marc"
+else:
+    text = "Not Recognized"
+# Define the font and other text properties
+font = cv2.FONT_HERSHEY_SIMPLEX
+font_scale = 1
+font_color = (255, 255, 255)  # White color in BGR
+thickness = 2
+x, y = face[3], face[0]  # Specify the x and y coordinates
+cv2.putText(img_train, text, (x, y), font, font_scale, font_color, thickness)
+
+cv2.rectangle(img_train, (face[3], face[0]),(face[1], face[2]), (255,0,255), 1)
+cv2.imshow('Training Image',img_train)
+
+
+cv2.imshow('test_image', test)
+
+cv2.waitKey(0)
+
+
+# To save the image with the added text
+# cv2.imwrite("image_with_text.jpg", image)
